@@ -26,7 +26,8 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
     //MARK: privat methods
     private func requestQuote(for symbol: String) {
-        let url = URL(string: "https://cloud.iexapis.com/stable/stock/\(symbol)/quote")!
+        let url = URL(string: "https://cloud.iexapis.com/stable/stock/\(symbol)/quote?token=pk_5b88c5e2261c4c92bd54c10a78f899d1")!
+//        let url = URL(string: "https://api.polygon.io/v2/aggs/ticker/\(symbol)/prev?adjusted=true&apiKey=Ya9JokdAQkbbwqC3I18TENN3LXpZVWEJ")!
         let dataTask = URLSession.shared.dataTask(with: url) { data, response, error in
             guard
                 error == nil,
@@ -88,6 +89,15 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
 
     
     
+    //MARK: !UIPicker!
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        self.activityIndicator.startAnimating()
+        
+        let selectedSymbol = Array(self.companies.values)[row]
+        self.requestQuote(for: selectedSymbol)
+    }
+    
     
     //MARK: UIPickerViewDataSource
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
@@ -97,6 +107,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         companies.keys.count
     }
+    
     
     //MARK: UIPickerViewDelegate
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
