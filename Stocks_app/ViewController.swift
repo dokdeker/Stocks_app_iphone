@@ -11,14 +11,16 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
     
     //MARK: - @IBOutlet
-    @IBOutlet weak var companyNameLabel: UILabel!
     @IBOutlet weak var currentCompanyNameLabel: UILabel!
     @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     @IBOutlet weak var companyPickerView: UIPickerView!
     
+    @IBOutlet weak var logoCompany: UIImageView!
     @IBOutlet weak var companySymbolLabel: UILabel!
     @IBOutlet weak var companyPriceChangeLabel: UILabel!
     @IBOutlet weak var companyPriceLabel: UILabel!
+    
+    
     
     
     
@@ -32,16 +34,113 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     
     
     //MARK: - privat methods
-    private func requestQuote(for symbol: String) {
-        let url = URL(string: "https://cloud.iexapis.com/stable/stock/\(symbol)/quote?token=pk_5b88c5e2261c4c92bd54c10a78f899d1")!
-//        let url = URL(string: "https://api.polygon.io/v2/aggs/ticker/\(symbol)/prev?adjusted=true&apiKey=Ya9JokdAQkbbwqC3I18TENN3LXpZVWEJ")!
+    
+    private func getImg(url:String){
+        if let url = URL(string: url) {
+            let task = URLSession.shared.dataTask(with: url) { data, response, error in
+                guard let data = data, error == nil else { return }
+                
+                DispatchQueue.main.async { /// execute on main thread
+                    self.logoCompany.image = UIImage(data: data)
+                }
+            }
+            
+            task.resume()
+        }
+    }
+    
+    
+    private func checkStockProfit(label: UILabel,value:Double) {
+        if value > 0 {
+            label.textColor = .green
+        } else {
+            label.textColor = .red
+        }
+    }
+    
+    private func showAlertError(message_errror: String) {
+        let alert = UIAlertController(title: "Ошибка", message: message_errror, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Принять", style: .cancel , handler: { action in
+
+        }))
+        
+        present(alert, animated: true)
+    }
+    
+    //MARK:  parse img
+    private func requestImg(for symbol: String) {
+        let url = URL(string: "https://cloud.iexapis.com/stable/stock/\(symbol)/logo/quote?token=pk_5b88c5e2261c4c92bd54c10a78f899d1")!
+
         let dataTask = URLSession.shared.dataTask(with: url) { data, response, error in
             guard
                 error == nil,
                 (response as? HTTPURLResponse)?.statusCode == 200,
                 let data = data
             else {
-                print("Network error")
+                
+                DispatchQueue.main.async {
+                    self.showAlertError(message_errror: "Отсутствует подключение к интернету")
+                }
+                return
+            }
+            
+            self.parseImg(data: data)
+            
+        }
+        
+        dataTask.resume()
+    }
+    
+    private func parseImg(data: Data) {
+        do {
+            let jsonObject = try JSONSerialization.jsonObject(with: data)
+            
+            guard
+                let json = jsonObject as? [String:Any],
+                let img = json["url"] as? String
+                
+                
+            else {
+                
+                DispatchQueue.main.async {
+                    self.showAlertError(message_errror: "Invalid Json format")
+                }
+                
+                
+                return
+            }
+            
+            print("Company name is \(img)")
+            DispatchQueue.main.async {
+                self.getImg(url: img)
+            }
+            
+        } catch {
+            DispatchQueue.main.async {
+                self.showAlertError(message_errror: "! Json parsing error: " + error.localizedDescription)
+            }
+            
+        }
+        
+    }
+    
+    
+    
+    
+    //MARK:  parse quote
+    private func requestQuote(for symbol: String) {
+        let url = URL(string: "https://cloud.iexapis.com/stable/stock/\(symbol)/quote?token=pk_5b88c5e2261c4c92bd54c10a78f899d1")!
+
+        let dataTask = URLSession.shared.dataTask(with: url) { data, response, error in
+            guard
+                error == nil,
+                (response as? HTTPURLResponse)?.statusCode == 200,
+                let data = data
+            else {
+                
+                DispatchQueue.main.async {
+                    self.showAlertError(message_errror: "Отсутствует подключение к интернету")
+                }
                 return
             }
             
@@ -51,6 +150,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         
         dataTask.resume()
     }
+    
     
     private func parseQuote(data: Data) {
         do {
@@ -62,21 +162,30 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
                 let companySymbol = json["symbol"] as? String,
                 let price = json["latestPrice"] as? Double,
                 let priceChange = json["change"] as? Double
+                
             else {
-                print("Invalid Json format")
+                
+                DispatchQueue.main.async {
+                    self.showAlertError(message_errror: "Invalid Json format")
+                }
+                
+                
                 return
             }
             
-            print("Company name is \(companyName)")
             DispatchQueue.main.async {
                 self.displayStockInfo(companyName: companyName,
                                       symbol: companySymbol,
                                       price: price,
                                       priceChange: priceChange)
+                
             }
             
         } catch {
-            print("! Json parsing error: " + error.localizedDescription)
+            DispatchQueue.main.async {
+                self.showAlertError(message_errror: "! Json parsing error: " + error.localizedDescription)
+            }
+            
         }
         
     }
@@ -93,6 +202,10 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         self.companyPriceLabel.text = "\(price)"
         self.companyPriceChangeLabel.text = "\(priceChange)"
         
+        self.checkStockProfit(label: companyPriceChangeLabel, value: (companyPriceChangeLabel.text! as NSString).doubleValue)
+        
+        self.getImg(url: symbol)
+        
     }
     
     
@@ -106,6 +219,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         let selectedRow = self.companyPickerView.selectedRow(inComponent: 0)
         let selectedSymbol = Array(self.companies.values)[selectedRow]
         self.requestQuote(for: selectedSymbol)
+        self.requestImg(for: selectedSymbol)
     }
     
     
@@ -120,9 +234,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         
         requestQuoteUpdate()
 
-        
-        
-        
+    
 
     }
 
@@ -131,11 +243,9 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     //MARK: !UIPicker!
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-//        self.activityIndicator.alpha = 1
+
         self.activityIndicator.startAnimating()
         
-//        let selectedSymbol = Array(self.companies.values)[row]
-//        self.requestQuote(for: selectedSymbol)
         self.requestQuoteUpdate()
     }
     
@@ -153,7 +263,12 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
     //MARK: UIPickerViewDelegate
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         Array(self.companies.keys)[row]
+        
     }
+    
+    
+    
+    
     
 }
 
