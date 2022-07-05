@@ -49,7 +49,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         }
     }
     
-    
+
     private func checkStockProfit(label: UILabel,value:Double) {
         if value > 0 {
             label.textColor = .green
@@ -90,6 +90,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         
         dataTask.resume()
     }
+    
     
     private func parseImg(data: Data) {
         do {
@@ -204,8 +205,6 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
         
         self.checkStockProfit(label: companyPriceChangeLabel, value: (companyPriceChangeLabel.text! as NSString).doubleValue)
         
-        self.getImg(url: symbol)
-        
     }
     
     
@@ -240,7 +239,7 @@ class ViewController: UIViewController, UIPickerViewDataSource, UIPickerViewDele
 
     
     
-    //MARK: !UIPicker!
+    //MARK: - !UIPicker!
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
 
